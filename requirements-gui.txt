@@ -1,0 +1,8 @@
+# Optional dependencies for the simple real-time GUI graph only.
+# Installs the core dependencies plus matplotlib.
+#
+# Note: Tkinter is part of the Python standard library on Windows/macOS, but on
+# Linux/Raspberry Pi you may need to install it separately:
+#   sudo apt install python3-tk
+-r requirements.txt
+matplotlib>=3.6

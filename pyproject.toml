@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "murata-soil-sensor"
+dynamic = ["version"]
+description = "Sample Python code for communicating with Murata soil sensors (SLT5005/5006/5007/5008/5009) from a PC."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "Murata Manufacturing Co., Ltd." }]
+keywords = ["murata", "soil-sensor", "serial", "modbus", "sdi-12", "rs485", "uart"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+dependencies = ["pyserial>=3.5"]
+
+[project.optional-dependencies]
+gui = ["matplotlib>=3.6"]
+dev = ["pytest>=7", "ruff>=0.4", "mypy>=1.8"]
+
+[project.urls]
+Homepage = "https://github.com/murata-sensor/soil-sensor-samples-python"
+
+# Single source of truth for the version: murata_soil_sensor/__init__.py
+[tool.setuptools.dynamic]
+version = { attr = "murata_soil_sensor.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["murata_soil_sensor*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
