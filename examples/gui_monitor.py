@@ -166,7 +166,7 @@ class MonitorApp(tk.Tk):
         broadcast_start: bool = False,
         baud: int | None = None,
         timeout: float | None = None,
-        csv_exclusive: bool = False,
+        csv_exclusive: bool = True,
     ):
         super().__init__()
         self.title("Murata soil sensor monitor")
@@ -352,7 +352,11 @@ class MonitorApp(tk.Tk):
 
         self._sensors = sensors
         self._multi = len(sensors) > 1
-        self._open_csv()
+        try:
+            self._open_csv()
+        except OSError as exc:
+            self.status_var.set(f"Error: cannot open CSV output: {exc}")
+            return
         self._series.clear()
         self._reset_axes()
         self._canvas.draw_idle()

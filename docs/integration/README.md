@@ -3,7 +3,7 @@
 How to use `murata_soil_sensor` inside your own application, and what to keep in
 mind when porting the protocol to another platform or language.
 
-自社アプリケーションへ `murata_soil_sensor` を組み込む際の使い方と、他プラット
+アプリケーションへ `murata_soil_sensor` を組み込む際の使い方と、他プラット
 フォーム／他言語へ移植する際の要点をまとめます。
 
 ## 1. Basic usage

@@ -8,7 +8,7 @@ of the `murata_soil_sensor` library.
 | Script | Purpose |
 |--------|---------|
 | `list_ports.py` | List available serial (COM) ports |
-| `read_measurement.py` | Read the latest measurement values (add `--all` for raw DDS/ADC) |
+| `read_measurement.py` | Read measurements (add `--all` for advanced diagnostic DDS/ADC counts) |
 | `read_info.py` | Read firmware version / serial number |
 | `set_address.py` | Change the sensor address |
 | `verify_address.py` | Verify address retention and serial identity after a power cycle |
@@ -34,11 +34,12 @@ accept:
 --broadcast-start  SLT5009: start 2+ sensors together by MODBUS broadcast
 ```
 
-`read_measurement.py` also accepts `--all` to include the raw DDS/ADC values.
+`read_measurement.py` also accepts `--all` to include the advanced diagnostic
+DDS/ADC counts.
 `gui_monitor.py` accepts `--sdi-crc` and `--broadcast-start` as command-line
 preselections and provides the same choices as GUI checkboxes. The GUI also
-provides baud-override and timeout fields; this lets a TBS01A evaluation board
-use its selected host baud (9600 bps at the factory setting).
+provides baud-override and timeout fields for matching the host-side settings
+specified by the USB-SDI-12 converter.
 
 ### Multiple sensors on one bus
 
@@ -127,11 +128,10 @@ SLT5007, SLT5008, and SLT5009.
 センサ1台だけを接続してください。変更後は通電中の配線を抜き差しせず、電源供給元
 をOFFにします。数秒待って電源を再投入し、表示された確認コマンドを実行します。
 
-### Uploading to a dashboard
+### Uploading measurements
 
 `continuous_log.py` can also POST each measurement to a Google Apps Script web
-app that appends it to a Google Sheet — the data path used by the companion
-**soil-sensor-data-monitoring** project.
+app that appends it to a Google Sheet or another data store.
 
 ```
 --upload-url      Web app URL (default: $SOIL_UPLOAD_URL)
@@ -139,9 +139,38 @@ app that appends it to a Google Sheet — the data path used by the companion
 ```
 
 The shared secret is read from `$SOIL_UPLOAD_TOKEN` only, never from the command
-line. Uploading happens once per `--interval`, so pick an interval of a few
-minutes rather than seconds. Failures are printed to stderr and logging
-continues, so the CSV remains the complete record.
+line. Set it with the hidden-input steps in the top-level README and remove the
+environment variable after use. Uploading happens once per `--interval`, so
+pick an interval of a few minutes rather than seconds. Failures are printed to
+stderr and logging continues, so the CSV remains the complete record.
 
-送信先の Web アプリ側の設定は soil-sensor-data-monitoring の
-`docs/04_gas_setup.md`（`pc-serial` スキーマ）を参照してください。
+The request is an HTTPS `POST` with `Content-Type: application/json` and this
+shape (fields whose measurements are unavailable are omitted):
+
+```json
+{
+  "token": "shared secret",
+  "rows": [
+    {
+      "ts": "2026-09-03T12:34:56+09:00",
+      "serialNumber": "24107928",
+      "battery_v": 12.1,
+      "temperature_c": 24.5,
+      "vwc_pct": 31.2,
+      "vwc_coco_pct": 30.8,
+      "vwc_rock_pct": 18.4,
+      "ec_bulk_dsm": 0.42,
+      "ec_pore_dsm": 1.11,
+      "ec_pore_coco_dsm": 1.08
+    }
+  ]
+}
+```
+
+The receiver must return a JSON object containing `{"ok": true}`. Treat the
+token and sensor serial numbers as sensitive data, restrict access to the
+receiver and sheet, and do not log the token.
+
+CSV output refuses to replace an existing file by default. Pass `--overwrite`
+only when replacing that file is intentional. The GUI likewise reports an
+error when its CSV path already exists; choose a new path before starting.

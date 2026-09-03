@@ -1,15 +1,15 @@
 """Optional upload of measurements to a Google Apps Script (GAS) web app.
 
-This is what connects the examples to the *soil-sensor-data-monitoring*
-dashboard: the web app appends each row to a Google Sheet that the dashboard
-reads with its ``pc-serial`` schema adapter.
+The receiver is expected to append the uploaded rows to a Google Sheet or other
+data store. See ``examples/README.md`` for the JSON request contract.
 
 Only the standard library is used, so no extra dependency is needed.
 
 The web app URL may be given with ``--upload-url`` or the ``SOIL_UPLOAD_URL``
 environment variable. The shared secret is read from ``SOIL_UPLOAD_TOKEN``
-only, never from the command line, so it does not end up in the shell history
-or in the process list.
+only and is never accepted as a command-line argument. Set it with the hidden
+prompt described in the top-level README rather than typing it literally into
+a shell command.
 """
 
 from __future__ import annotations

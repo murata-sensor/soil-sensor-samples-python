@@ -7,10 +7,10 @@ Examples:
     python examples/continuous_log.py --product SLT5009 --port COM3 --address 1,2,3 \
         --interval 10 --out data.csv
 
-Each measurement can also be uploaded to a Google Sheet, which is how the
-soil-sensor-data-monitoring dashboard gets its data:
+Each measurement can also be uploaded to a compatible Google Apps Script web
+app. Set ``SOIL_UPLOAD_TOKEN`` using the hidden-input instructions in README.md,
+then run:
 
-    $env:SOIL_UPLOAD_TOKEN = "..."
     python examples/continuous_log.py --product SLT5009 --port COM3 --address 1,2 \
         --interval 300 --out data.csv --upload-url https://script.google.com/...
 
@@ -62,6 +62,11 @@ def main(argv=None) -> int:
         "--count", type=int, default=0, help="Number of measurements (0 = run until Ctrl+C)."
     )
     parser.add_argument("--out", help="CSV output file (default: stdout only).")
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing --out CSV file instead of refusing.",
+    )
     _uploader.add_arguments(parser)
     args = parser.parse_args(argv)
 
@@ -81,7 +86,20 @@ def main(argv=None) -> int:
         *Measurement.field_names(),
     ]
 
-    out_file = open(args.out, "w", newline="", encoding="utf-8") if args.out else None
+    try:
+        out_file = (
+            open(
+                args.out,
+                "w" if args.overwrite else "x",
+                newline="",
+                encoding="utf-8",
+            )
+            if args.out
+            else None
+        )
+    except OSError as exc:
+        print(f"error: cannot open CSV output {args.out!r}: {exc}", file=sys.stderr)
+        return 1
     writer = csv.writer(out_file) if out_file else None
 
     taken = 0

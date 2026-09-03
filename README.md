@@ -11,9 +11,9 @@ Sample Python code for communicating with **Murata soil sensors** from a PC
 
 ### Overview
 
-This repository provides ready-to-use Python samples that let you talk to Murata
-soil sensors over a serial connection. The goal is to reduce customer support
-effort and make it easy to evaluate Murata soil sensors in your own system.
+This repository provides ready-to-use Python samples for communicating with
+Murata soil sensors over a serial connection. You can use them to evaluate a
+sensor and as a reference when integrating one into an application.
 
 > **Safety:** These samples communicate with physical hardware and can change
 > persistent settings such as sensor addresses. Turn off power before changing
@@ -43,21 +43,25 @@ This code has two intended uses:
 | SLT5005 | RS-232C | Murata binary | Same firmware/protocol as SLT5006; RS-232C levels |
 | SLT5006 | UART (TTL) | Murata binary | Single sensor |
 | SLT5007 | RS-485 | Murata binary | Multi-sensor addressing |
-| SLT5008 | SDI-12 (via TBS03) | SDI-12 (ASCII) | Full measurement API targets FW 1.7.0+; TBS03 PC side: 19200 bps, 8N1 |
+| SLT5008 | SDI-12 (via USB converter) | SDI-12 (ASCII) | Full measurement API targets FW 1.7.0+; operation verified with TBS03 |
 | SLT5009 | RS-485 | MODBUS RTU | Multi-sensor addressing |
 
 See [docs/protocol/](docs/protocol/) for wire-protocol details,
 [docs/wiring/](docs/wiring/) for wiring, and
 [docs/integration/](docs/integration/) for embedding the library in your app.
 
-The recommended PC adapter for SLT5008 is the Tekbox TBS03. Its virtual COM
-port uses 19200 bps, 8 data bits, no parity, 1 stop bit, and no flow control.
-A TBS01A evaluation board can also be used for data conversion at its
-jumper-selected baud rate; its host-side format is likewise 8N1. Its
-USB-derived 5 V sensor supply is outside the SLT5008 rating, so power the sensor
-from an external 9.6-16.0 V supply (normally 12 V) and share ground. Do not
-configure the PC port for native SDI-12 (1200 bps, 7E1), because the converter
-generates that side.
+SLT5008 can be used through a USB-SDI-12 converter that exposes a compatible
+serial interface. Murata has verified operation with the Tekbox TBS03; other
+general-purpose USB-SDI-12 converters are expected to work when they accept
+CRLF-terminated SDI-12 ASCII commands and return CRLF-terminated responses, but
+have not been verified by Murata. Follow the converter manual for its PC-side
+serial settings and use `--baud` when needed. A converter with a proprietary
+API or different framing may require an adapter-specific code change.
+
+For the verified TBS03 configuration, the virtual COM port uses 19200 bps, 8
+data bits, no parity, 1 stop bit, and no flow control. Configure the PC side
+according to the converter rather than assuming the native SDI-12 line settings
+of 1200 bps, 7E1.
 
 ### Features
 
@@ -101,7 +105,7 @@ pip install git+https://github.com/murata-sensor/soil-sensor-samples-python.git
 # List available serial ports (to find your sensor)
 python examples/list_ports.py
 
-# Read the latest measurement (add --all for raw DDS/ADC values)
+# Read the latest measurement (add --all for advanced diagnostic DDS/ADC counts)
 python examples/read_measurement.py --product SLT5009 --port COM3 --address 1
 
 # Read sensor information
@@ -116,21 +120,26 @@ python examples/gui_monitor.py --product SLT5009 --port COM3
 
 ### Sending the data to a dashboard (optional)
 
-`continuous_log.py` can POST every measurement to a Google Apps Script web app,
-which appends it to a Google Sheet. This is the data path used by
-**soil-sensor-data-monitoring**, a companion project that visualizes the sheet
-in a browser.
+`continuous_log.py` can POST every measurement to a compatible Google Apps
+Script web app that appends it to a Google Sheet. The receiver must implement
+the JSON contract described in [examples/README.md](examples/README.md#uploading-measurements).
+
+On Bash, enter the token without echoing it or placing it literally in the
+command history:
 
 ```bash
-export SOIL_UPLOAD_TOKEN="<shared secret>"   # PowerShell: $env:SOIL_UPLOAD_TOKEN = "..."
+read -rsp "SOIL_UPLOAD_TOKEN: " SOIL_UPLOAD_TOKEN; echo
+export SOIL_UPLOAD_TOKEN
 python examples/continuous_log.py --product SLT5009 --port COM3 --address 1,2 \
     --interval 300 --out data.csv \
     --upload-url https://script.google.com/macros/s/<deployment-id>/exec
+unset SOIL_UPLOAD_TOKEN
 ```
 
 - The upload happens once per measurement interval, in the same batch as the CSV row.
-- The URL may also come from `SOIL_UPLOAD_URL`. The shared secret is read from
-  `SOIL_UPLOAD_TOKEN` only, so it never appears in the shell history.
+- The URL may also come from `SOIL_UPLOAD_URL`. The shared secret is accepted
+  only through `SOIL_UPLOAD_TOKEN`, not as a command-line argument. Use a hidden
+  prompt as above and remove the environment variable after use.
 - An upload failure is reported and logging continues; the CSV stays complete.
 - Sensors are identified by their serial number, so several sensors on one bus
   can share a single sheet.
@@ -164,8 +173,8 @@ behavior against the relevant product datasheet before using in production.
 ### 概要
 
 村田製作所の**土壌センサ**を PC（Windows / Linux / macOS / Raspberry Pi）から
-シリアル通信で操作するための Python サンプルコード集です。顧客サポート負荷の
-低減と、ムラタ土壌センサの評価容易化を目的としています。
+シリアル通信で操作するための Python サンプルコード集です。センサの評価と、
+アプリケーションへ組み込む際の参考実装として利用できます。
 
 > **安全上の注意：** 本サンプルは実機と通信し、センサアドレスなどの不揮発設定を
 > 変更できます。配線を変更する前に電源を切り、定格内の電源・インターフェースを
@@ -182,9 +191,9 @@ behavior against the relevant product datasheet before using in production.
 本コードには 2 つの用途があります。
 
 1. **動作確認** — PC でセンサが動くことを手軽に確認する。
-2. **組み込み参考コード** — 顧客が自社システムに土壌センサを組み込む際に、読んで・
-   コピーして・流用できる、きれいで十分に文書化されたリファレンス実装。プロトコル
-   ロジックは他言語（例: C / Arduino）へも移植しやすい構造を志向します。
+2. **組み込み参考コード** — 土壌センサをアプリケーションに組み込む際に、読んで・
+   コピーして・流用できるリファレンス実装。プロトコルロジックは他言語
+   （例: C / Arduino）へも移植しやすい構造を志向します。
 
 ### 対応センサ
 
@@ -193,17 +202,21 @@ behavior against the relevant product datasheet before using in production.
 | SLT5005 | RS-232C | ムラタ独自バイナリ | SLT5006 とファーム/プロトコル同一。RS-232C レベル |
 | SLT5006 | UART (TTL) | ムラタ独自バイナリ | 単体センサ |
 | SLT5007 | RS-485 | ムラタ独自バイナリ | マルチセンサ（アドレス指定） |
-| SLT5008 | SDI-12（TBS03 経由） | SDI-12（ASCII） | 全測定APIはFW 1.7.0以降が対象。TBS03のPC側は19200 bps、8N1 |
+| SLT5008 | SDI-12（USB変換器経由） | SDI-12（ASCII） | 全測定APIはFW 1.7.0以降が対象。TBS03で動作確認済み |
 | SLT5009 | RS-485 | MODBUS RTU | マルチセンサ（アドレス指定） |
 
-プロトコル詳細は [docs/protocol/](docs/protocol/)、配線は [docs/wiring/](docs/wiring/)、自社アプリへの組み込みは [docs/integration/](docs/integration/) を参照してください。
+プロトコル詳細は [docs/protocol/](docs/protocol/)、配線は [docs/wiring/](docs/wiring/)、アプリケーションへの組み込みは [docs/integration/](docs/integration/) を参照してください。
 
-SLT5008 の推奨 PC 変換器は Tekbox TBS03 です。仮想 COM ポートは
-19200 bps、8 データビット、パリティなし、1 ストップビット、フロー制御なしです。
-TBS01A 評価ボードもジャンパで選択したボーレート（データ形式は同じく 8N1）で
-データ変換に使用できます。ただし USB 由来のセンサ電源は 5 V で SLT5008 の定格外
-です。センサには外部 9.6～16.0 V（通常 12 V）を供給し、GND を共通化してください。
-SDI-12 本来の 1200 bps、7E1 は変換器側が生成するため、PC 側には設定しません。
+SLT5008 は、互換性のあるシリアルインターフェースを提供する一般的な
+USB-SDI-12 変換器で利用できます。ムラタで動作確認済みの機種は Tekbox TBS03
+です。その他の変換器も、CRLF終端のSDI-12 ASCIIコマンドを受け取り、CRLF終端の
+応答を返す機種であれば動作が見込まれますが、ムラタでは未確認です。PC側の通信設定
+は変換器の説明書に従い、必要に応じて `--baud` を指定してください。独自APIや異なる
+フレーミングを使用する機種では、変換器に合わせたコード変更が必要な場合があります。
+
+動作確認済みのTBS03では、仮想COMポートを19200 bps、8データビット、パリティなし、
+1ストップビット、フロー制御なしに設定します。PC側にはSDI-12本来の1200 bps、
+7E1を一律に設定せず、変換器の仕様に従ってください。
 
 ### 機能
 
@@ -247,7 +260,7 @@ pip install git+https://github.com/murata-sensor/soil-sensor-samples-python.git
 # 利用可能なシリアルポートを一覧表示（センサのポートを探す）
 python examples/list_ports.py
 
-# 最新の測定値を読み出す（--all で生の DDS/ADC 値も表示）
+# 最新の測定値を読み出す（--all で高度な診断用 DDS/ADC カウント値も表示）
 python examples/read_measurement.py --product SLT5009 --port COM3 --address 1
 
 # センサ情報を読み出す
@@ -262,20 +275,23 @@ python examples/gui_monitor.py --product SLT5009 --port COM3
 
 ### 取得データをダッシュボードへ送る（任意）
 
-`continuous_log.py` は、測定するたびに Google Apps Script の Web アプリへ POST
-して Google スプレッドシートに追記できます。これは、シートをブラウザで可視化する
-関連プロジェクト **soil-sensor-data-monitoring** のデータ経路です。
+`continuous_log.py` は、測定するたびに互換性のある Google Apps Script の Web
+アプリへ POST して Google スプレッドシートに追記できます。受信側は
+[examples/README.md](examples/README.md#uploading-measurements) に記載した JSON 形式を実装する必要があります。
 
 ```powershell
-$env:SOIL_UPLOAD_TOKEN = "<共有シークレット>"
+$secureToken = Read-Host "SOIL_UPLOAD_TOKEN" -AsSecureString
+$env:SOIL_UPLOAD_TOKEN = [System.Net.NetworkCredential]::new("", $secureToken).Password
 python examples/continuous_log.py --product SLT5009 --port COM3 --address 1,2 `
     --interval 300 --out data.csv `
     --upload-url https://script.google.com/macros/s/<deployment-id>/exec
+Remove-Item Env:SOIL_UPLOAD_TOKEN
 ```
 
 - 送信は測定間隔ごとに 1 回、CSV への 1 行と同じタイミングで行われます。
-- URL は `SOIL_UPLOAD_URL` でも指定できます。共有シークレットは
-  `SOIL_UPLOAD_TOKEN` からのみ読むので、コマンド履歴に残りません。
+- URL は `SOIL_UPLOAD_URL` でも指定できます。共有シークレットはコマンドライン
+  引数ではなく `SOIL_UPLOAD_TOKEN` からのみ読みます。上記のように非表示入力し、
+  使用後は環境変数を削除してください。
 - 送信に失敗してもログは継続します（CSV は欠けません）。
 - センサはシリアル番号で識別されるため、1 本のバス上の複数センサを 1 シートに
   まとめて記録できます。

@@ -33,7 +33,7 @@ FIELD_UNITS = {
     "ec_pore_coco": "dS/m",
 }
 
-# Raw/internal values that customers usually do not need. Shown only on request.
+# Advanced diagnostic counts. The examples show them only when requested.
 ADVANCED_FIELDS = frozenset({"dds", "adc_ec", "adc_permittivity", "adc_battery"})
 
 # The battery ADC is 12 bit against a 3.3 V reference.

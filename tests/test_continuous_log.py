@@ -129,6 +129,38 @@ def test_logger_keeps_other_sensor_when_broadcast_poll_fails(monkeypatch, capsys
     assert ",2,1.2.3,102," in captured.out
 
 
+def test_logger_requires_overwrite_flag_for_existing_csv(monkeypatch, capsys, tmp_path):
+    sensor = _Sensor(1)
+    monkeypatch.setattr(continuous_log._cli, "build_sensors", lambda _args: [sensor])
+    monkeypatch.setattr(
+        continuous_log._uploader.Uploader,
+        "from_args",
+        classmethod(lambda _cls, _args: None),
+    )
+
+    output = tmp_path / "measurement.csv"
+    output.write_text("original\n", encoding="utf-8")
+    base_args = [
+        "--product",
+        "SLT5009",
+        "--port",
+        "COM3",
+        "--address",
+        "1",
+        "--count",
+        "1",
+        "--out",
+        str(output),
+    ]
+
+    assert continuous_log.main(base_args) == 1
+    assert output.read_text(encoding="utf-8") == "original\n"
+    assert "cannot open CSV output" in capsys.readouterr().err
+
+    assert continuous_log.main([*base_args, "--overwrite"]) == 0
+    assert output.read_text(encoding="utf-8").startswith("timestamp,firmware,serial,")
+
+
 def test_logger_drops_failed_samples_and_records_recovery_across_cycles(
     monkeypatch, capsys, tmp_path
 ):

@@ -1,31 +1,31 @@
 # Protocol specifications / プロトコル仕様
 
-This directory documents the wire protocols used by each supported Murata soil
-sensor. **Only customer-facing (public) information is included here.** Refer to
-each product datasheet for the complete register map and electrical details.
+This directory documents the wire-protocol details needed to use these samples
+with each supported Murata soil sensor. Refer to the current product datasheet
+for the complete register map and electrical details.
 
-各対応品番の通信プロトコルをまとめます。**顧客公開情報のみ**を記載します。完全な
-レジスタマップや電気的仕様は各製品データシートを参照してください。
+各対応品番について、本サンプルの利用に必要な通信プロトコルをまとめます。完全な
+レジスタマップや電気的仕様は、最新の製品データシートを参照してください。
 
 | Product | Interface | Protocol | Baud (PC side) | Parity | Doc |
 |---------|-----------|----------|----------------|--------|-----|
 | SLT5005 | RS-232C | Murata binary | 9600 | None | [slt5006.md](slt5006.md) (same as SLT5006) |
 | SLT5006 | UART (TTL) | Murata binary | 9600 | None | [slt5006.md](slt5006.md) |
 | SLT5007 | RS-485 | Murata binary (multi-sensor) | 9600 | None | [slt5007.md](slt5007.md) |
-| SLT5008 | SDI-12 via TBS03 | SDI-12 (ASCII) | 19200 (TBS03) | None (8N1) | [slt5008.md](slt5008.md) |
+| SLT5008 | SDI-12 via USB converter | SDI-12 (ASCII) | Converter-specific; TBS03: 19200 | Converter-specific; TBS03: 8N1 | [slt5008.md](slt5008.md) |
 | SLT5009 | RS-485 | MODBUS RTU | 9600 | None | [slt5009.md](slt5009.md) |
 
-The table shows the **PC side**. On SLT5008, TBS03 converts 19200/8N1 to the
-native SDI-12 line format, 1200/7E1. A TBS01A evaluation board instead uses its
-jumper-selected baud rate and 8N1. Its USB-derived 5 V sensor output must not
-power SLT5008; use an external 9.6-16.0 V sensor supply with common ground. See
-[slt5008.md](slt5008.md).
+The table shows the **PC side**. Murata has verified SLT5008 operation with
+TBS03, which converts 19200/8N1 to the native SDI-12 line format. Other
+general-purpose USB-SDI-12 converters are expected to work when their serial
+command framing is compatible, but have not been verified by Murata; use the
+PC-side settings specified by the converter. See [slt5008.md](slt5008.md).
 
-表は **PC 側**の設定です。SLT5008 では TBS03 が 19200/8N1 を SDI-12 本来の
-1200/7E1 に変換します。TBS01A 評価ボードではジャンパで選択したボーレートと
-8N1 を使用します。ただし USB 由来の 5 V 出力は SLT5008 の電源に使用せず、GNDを
-共通化した外部 9.6～16.0 V 電源を使用します。詳細は
-[slt5008.md](slt5008.md) を参照してください。
+表は **PC 側**の設定です。ムラタでは、19200/8N1をSDI-12へ変換するTBS03で
+SLT5008の動作を確認しています。その他の一般的なUSB-SDI-12変換器も、シリアル
+コマンドのフレーミングに互換性があれば動作が見込まれますが、ムラタでは未確認です。
+PC側は各変換器の指定に従って設定してください。詳細は
+[slt5008.md](slt5008.md)を参照してください。
 
 ## CRC-16 variants / CRC-16 の品種差
 

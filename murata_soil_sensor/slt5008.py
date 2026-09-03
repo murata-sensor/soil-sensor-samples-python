@@ -1,13 +1,13 @@
-"""SLT5008 — SDI-12 protocol (via TBS03 or a TBS01A evaluation board).
+"""SLT5008 — SDI-12 protocol through a serial-connected SDI-12 converter.
 
 SDI-12 commands are ASCII, addressed by a single digit (``0``-``9``), and
 terminated with ``!``. Responses end with ``<CR><LF>``.
 
 Note on serial settings: the PC talks to the **converter**, whose PC-side serial
-settings differ from the native SDI-12 line (1200 bps, 7E1). The default here
-(19200, 8N1) matches the TBS03 USB converter. TBS01A uses 8N1 with a selectable
-baud rate; its evaluation board requires an external 9.6-16.0 V sensor supply
-because its USB-derived 5 V output is outside the SLT5008 rating.
+settings may differ from the native SDI-12 line (1200 bps, 7E1). The default
+here (19200, 8N1) matches the TBS03 USB converter verified by Murata. Other
+converters are expected to work when they accept and return CRLF-terminated
+SDI-12 ASCII messages; use their documented host baud rate.
 
 Measurement sequence::
 
@@ -60,8 +60,8 @@ _ADDRESS_SETTLE_S = 1.0
 # range instead of silently coercing malformed values.
 _RAW_COUNT_MAX = 0xFFFF
 
-# TBS03/TBS01A-family converters report a completed host-side read with this
-# exact frame when no SDI-12 sensor replied.  Do not accept spelling, case,
+# TBS03 reports a completed host-side read with this exact frame when no
+# SDI-12 sensor replied. Do not accept spelling, case,
 # padding, or framing variants: they are malformed/unknown adapter data.
 SDI12_NO_RESPONSE_SENTINEL = b"No Response\r\n"
 

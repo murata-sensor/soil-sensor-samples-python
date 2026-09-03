@@ -63,9 +63,16 @@ connection on SLT5008.
 - Multiple sensors can share the bus; each has its own address.
 - 9600 bps, 8N1.
 
-## SLT5008 — SDI-12 via TBS03
+## SLT5008 — SDI-12 via USB converter
 
-Recommended TBS03 connection:
+Use a USB-SDI-12 converter rated for the sensor supply, bus voltage, and total
+current of the connected sensors. Follow its manual for terminal names, PC-side
+serial settings, and power limits. Murata has verified the following TBS03
+configuration. Other general-purpose USB-SDI-12 converters are expected to work
+when they provide compatible transparent serial command framing, but have not
+been verified by Murata.
+
+Verified TBS03 connection:
 
 | SLT5008 wire | TBS03 terminal |
 |--------------|----------------|
@@ -75,28 +82,33 @@ Recommended TBS03 connection:
 | GRAY / shield | SHIELD/GND (recommended) |
 
 Leave WHITE, YELLOW, GREEN, and ORANGE floating and individually insulated.
+For another converter, connect RED to a rated 9.6-16.0 V supply, BLACK to the
+common ground, and BLUE to its SDI-12 data terminal; verify the exact terminals
+and whether a separate sensor supply is required in the converter manual.
 
 - TBS03 virtual COM port: **19200 bps, 8 data bits, no parity, 1 stop bit, no
   flow control**.
 - Native SDI-12 is 1200 bps, 7E1. TBS03 generates this line format together
   with break, mark, and bidirectional timing; do not configure the PC for 7E1.
-- A TBS01A evaluation board can also handle the data conversion. Match
-  `--baud` to its jumper selection (factory default 9600); its host side is
-  always 8N1. **Do not power SLT5008 from the board's USB-derived 5 V sensor
-  output.** Use an external 9.6-16.0 V supply (normally 12 V) for the sensor and
-  connect the supply, sensor, and board grounds together.
 - When powered only from USB, the TBS03 12 V sensor output is limited to
   120 mA total. With a suitable 10.5-16 V external input connected as specified
   in the TBS03 manual, the sensor output is limited to 250 mA total. Include
   every connected sensor's active and inrush current; if the applicable limit
   can be exceeded, use a separately rated sensor supply.
 
-TBS03 推奨配線は RED→SDI-12 POWER、BLACK→GND、BLUE→SDI-12 DATA、
-GRAY/シールド→SHIELD/GNDです。WHITE、YELLOW、GREEN、ORANGE は個別に
-絶縁してフローティングにします。PC 側は 19200 bps、8N1、フロー制御なしです。
-SDI-12 側の 1200 bps、7E1、break/mark、送受信方向は TBS03 が処理します。
-TBS01A 評価ボード使用時は、USB 由来の 5 V 出力をセンサ電源に使用せず、外部
-9.6～16.0 V（通常 12 V）をセンサへ供給して GND を共通化してください。
+一般的なUSB-SDI-12変換器を使用できますが、センサ電源・バス電圧・接続台数の
+合計電流に対応する機種を選び、端子名、PC側通信設定、電源上限は変換器の説明書で
+確認してください。ムラタで動作確認済みの構成はTBS03です。その他の変換器も、
+透過的なシリアルコマンドのフレーミングに互換性があれば動作が見込まれますが、
+ムラタでは未確認です。
+
+動作確認済みのTBS03配線はRED→SDI-12 POWER、BLACK→GND、
+BLUE→SDI-12 DATA、GRAY/シールド→SHIELD/GNDです。WHITE、YELLOW、GREEN、
+ORANGEは個別に絶縁してフローティングにします。PC側は19200 bps、8N1、
+フロー制御なしです。SDI-12側の1200 bps、7E1、break/mark、送受信方向はTBS03が
+処理します。他の変換器では、REDを定格9.6～16.0 Vの電源、BLACKを共通GND、
+BLUEをSDI-12データ端子へ接続し、正確な端子と別電源の要否を説明書で確認して
+ください。
 TBS03 を USB のみで給電する場合、12 V センサ出力は合計 120 mA までです。
 TBS03 の取扱説明書に従って 10.5～16 V の外部入力を使用する場合、センサ出力は
 合計 250 mA までです。接続する全センサの動作電流と突入電流を合算し、該当する
@@ -119,4 +131,3 @@ SDI-12同時計測（`aC!` / `aCC!`）やSLT5009のブロードキャスト測�
 
 - The applicable Murata soil-sensor datasheet (power, cable, and interface ratings)
 - [Tekbox TBS03 SDI-12/USB converter manual](https://www.tekbox.com/product/TBS03_SDI-12_USBConverterManual.pdf)
-- [Tekbox TBS01A evaluation-board manual](https://www.tekbox.com/product/TBS01A_EVB_Manual.pdf)

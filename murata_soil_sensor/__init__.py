@@ -35,7 +35,7 @@ from .slt5007 import Slt5007
 from .slt5008 import Slt5008, read_concurrent, start_concurrent
 from .slt5009 import Slt5009, read_broadcast_measurement, start_broadcast_measurement
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "__version__",

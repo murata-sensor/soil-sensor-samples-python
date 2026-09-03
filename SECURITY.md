@@ -31,8 +31,10 @@ confidential information from all reports and attachments. Do not test against
 systems or devices that you do not own or have permission to test.
 
 If the private reporting form is unavailable, do not disclose the vulnerability
-in a public issue. Please try again after the repository has been made public and
-private vulnerability reporting has been enabled.
+in a public issue. Contact the maintainers at
+[murata_sensor@murata.com](mailto:murata_sensor@murata.com) instead. Do not
+include vulnerability details or other sensitive information in the initial
+email; first ask for a private channel for the report.
 
 For general defects, usage questions, and feature requests that do not involve a
 security vulnerability, use
@@ -69,8 +71,9 @@ Security上の脆弱性を、公開GitHub Issue、Discussion、Pull Requestへ�
 systemやdeviceに対して検証を行わないでください。
 
 非公開報告フォームが利用できない場合も、脆弱性を公開Issueへ投稿しないでください。
-リポジトリのpublic公開とPrivate vulnerability reportingの有効化後に、再度報告して
-ください。
+代わりに [murata_sensor@murata.com](mailto:murata_sensor@murata.com) へ連絡して
+ください。最初のメールには脆弱性の詳細やその他の機密情報を記載せず、非公開で
+報告できる方法をお問い合わせください。
 
 Security上の脆弱性ではない一般的な不具合、ご質問、機能要望は、
 [GitHub Issues](https://github.com/murata-sensor/soil-sensor-samples-python/issues)

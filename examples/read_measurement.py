@@ -1,7 +1,7 @@
 """Read the latest measurement from a Murata soil sensor.
 
-By default only the customer-facing values are shown. Use --all to also print
-the raw/internal parameters (DDS and ADC counts).
+By default only engineering-unit values are shown. Use --all to also print the
+advanced diagnostic DDS and ADC counts.
 
 Example:
     python examples/read_measurement.py --product SLT5009 --port COM3 --address 1
@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Also show raw/internal parameters (DDS, ADC counts).",
+        help="Also show advanced diagnostic values (DDS and ADC counts).",
     )
     args = parser.parse_args()
 
