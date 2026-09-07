@@ -39,7 +39,8 @@ class _Sensor:
     def read_info(self, _transport):
         return SensorInfo(self.product, self.firmware_version, 23126040)
 
-    def read_measurement(self, _transport):
+    def read_measurement(self, _transport, *, include_advanced=False):
+        assert include_advanced is False
         return Measurement(vwc=20.0, ec_pore_coco=91.0)
 
     def supports_ec_pore_coco(self, firmware_version):
@@ -54,6 +55,16 @@ class _Slt5007Sensor(_Sensor):
         return create_sensor(self.product).supports_ec_pore_coco(firmware_version)
 
 
+class _AdvancedSensor(_Sensor):
+    def __init__(self, firmware_version):
+        super().__init__(firmware_version)
+        self.include_advanced = None
+
+    def read_measurement(self, _transport, *, include_advanced=False):
+        self.include_advanced = include_advanced
+        return Measurement(dds=16, adc_ec=32, vwc=20.0)
+
+
 class _Slt5008Sensor(_Sensor):
     product = "SLT5008"
     ec_pore_coco_min_version = "1.7.0"
@@ -64,6 +75,34 @@ class _Slt5008Sensor(_Sensor):
 
     def supports_ec_pore_coco(self, firmware_version):
         return create_sensor(self.product).supports_ec_pore_coco(firmware_version)
+
+
+def test_all_requests_and_prints_advanced_values(monkeypatch, capsys):
+    sensor = _AdvancedSensor("1.7.6")
+    monkeypatch.setattr(read_measurement._cli, "build_sensors", lambda _args: [sensor])
+    monkeypatch.setattr(
+        read_measurement._cli,
+        "use_concurrent",
+        lambda _sensors, *, broadcast_start: False,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "read_measurement.py",
+            "--product",
+            "SLT5006",
+            "--port",
+            "COM13",
+            "--all",
+        ],
+    )
+
+    assert read_measurement.main() == 0
+    assert sensor.include_advanced is True
+    output = capsys.readouterr().out
+    assert "dds: 16 counts" in output
+    assert "adc_ec: 32 counts" in output
 
 
 class _BroadcastSensor:
@@ -86,7 +125,8 @@ class _BroadcastSensor:
     def read_info(self, _transport):
         return SensorInfo(self.product, self.firmware_version, self.serial_number)
 
-    def read_measurement(self, _transport):
+    def read_measurement(self, _transport, *, include_advanced=False):
+        assert include_advanced is False
         self.individual_read_calls += 1
         return self.measurement
 
@@ -253,7 +293,8 @@ def test_slt5009_broadcast_one_shot_prints_both_sensors(monkeypatch, capsys):
         assert broadcast_start
         return True
 
-    def read_concurrent(selected, transport):
+    def read_concurrent(selected, transport, *, include_advanced):
+        assert include_advanced is False
         concurrent_call.update(sensors=selected, transport=transport)
         return [sensor.measurement for sensor in selected]
 
@@ -309,7 +350,8 @@ def test_slt5009_broadcast_one_shot_does_not_print_partial_results(monkeypatch, 
 
     read_attempts = []
 
-    def fail_on_second_sensor(selected, _transport):
+    def fail_on_second_sensor(selected, _transport, *, include_advanced):
+        assert include_advanced is False
         measurements = []
         for sensor in selected:
             read_attempts.append(sensor.slave)

@@ -34,8 +34,14 @@ accept:
 --broadcast-start  SLT5009: start 2+ sensors together by MODBUS broadcast
 ```
 
-`read_measurement.py` also accepts `--all` to include the advanced diagnostic
-DDS/ADC counts.
+`read_measurement.py` also accepts `--all` to read and display the advanced
+diagnostic DDS/ADC counts. For SLT5005/5006/5007, the default read is one
+18-byte transaction from ADC_BATTERY through EC_PORE_COCO; `--all` changes it
+to one 26-byte transaction from DDS through EC_PORE_COCO. SLT5009 similarly
+uses one 18-byte transaction by default and one 24-byte transaction with
+`--all`. ADC_BATTERY remains in the default read so `battery_v` is available.
+SLT5008 is unchanged because its SDI-12 D0 response always contains both the
+diagnostic counts and engineering values.
 `gui_monitor.py` accepts `--sdi-crc` and `--broadcast-start` as command-line
 preselections and provides the same choices as GUI checkboxes. The GUI also
 provides baud-override and timeout fields for matching the host-side settings

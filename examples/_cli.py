@@ -201,12 +201,14 @@ def start_concurrent_measurement(
     raise ValueError("simultaneous measurement requires only SLT5008 or only SLT5009")
 
 
-def read_concurrent_measurement(sensors, transport):
+def read_concurrent_measurement(sensors, transport, *, include_advanced=False):
     """Start and read a homogeneous group using the product-specific mechanism."""
     if all(isinstance(sensor, Slt5008) for sensor in sensors):
         return read_concurrent(sensors, transport)
     if all(isinstance(sensor, Slt5009) for sensor in sensors):
-        return read_broadcast_measurement(sensors, transport)
+        return read_broadcast_measurement(
+            sensors, transport, include_advanced=include_advanced
+        )
     raise ValueError("simultaneous measurement requires only SLT5008 or only SLT5009")
 
 

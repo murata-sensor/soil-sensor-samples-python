@@ -48,9 +48,9 @@ _REG_SERIAL = 0x0006  # 2 registers: hi<<16 | lo
 _REG_SNSR_CTRL = 0x000A
 _REG_SNSR_STATE = 0x000C
 _REG_DDS = 0x000E
-_REG_ADC_EC = 0x0010
-_REG_MEAS_BLOCK = 0x0012  # PERMITTIVITY .. EC_PORE_COCO (10 registers)
-_MEAS_COUNT = 10
+_REG_ADC_BATTERY = 0x0014
+_ADVANCED_MEAS_COUNT = 12  # DDS .. EC_PORE_COCO (24 bytes)
+_STANDARD_MEAS_COUNT = 9  # ADC_BATTERY .. EC_PORE_COCO (18 bytes)
 _REG_SENSOR_NUMBER = 0x0026
 
 _SNSR_CTRL_START = 0x0001
@@ -253,14 +253,18 @@ class Slt5009(SoilSensor):
             product=self.product, firmware_version=firmware, serial_number=serial_number
         )
 
-    def read_measurement(self, transport: Transport) -> Measurement:
+    def read_measurement(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
         self._write_registers(transport, _REG_SNSR_CTRL, [_SNSR_CTRL_START])
         self._wait_measurement(transport)
-        return self.read_data(transport)
+        return self.read_data(transport, include_advanced=include_advanced)
 
-    def read_data(self, transport: Transport) -> Measurement:
+    def read_data(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
         """Read the latest completed measurement without starting a new one."""
-        return self._read_values(transport)
+        return self._read_values(transport, include_advanced=include_advanced)
 
     def _wait_measurement(self, transport: Transport) -> None:
         deadline = time.monotonic() + self._measurement_timeout
@@ -271,18 +275,33 @@ class Slt5009(SoilSensor):
             time.sleep(self._poll_interval)
         raise SensorTimeoutError("measurement did not complete in time")
 
-    def _read_values(self, transport: Transport) -> Measurement:
-        dds = self._read_registers(transport, _REG_DDS, 1)[0]
-        adc_ec = self._read_registers(transport, _REG_ADC_EC, 1)[0]
-        words = self._read_registers(transport, _REG_MEAS_BLOCK, _MEAS_COUNT)
-        # words: perm, battery, temp, ec_bulk, vwc_rock, vwc, vwc_coco,
-        #        reserved, ec_pore, ec_pore_coco
+    def _read_values(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
+        if include_advanced:
+            values = self._read_registers(
+                transport, _REG_DDS, _ADVANCED_MEAS_COUNT
+            )
+            dds = values[0]
+            adc_ec = values[1]
+            words = values[2:]
+            adc_permittivity = words[0]
+        else:
+            values = self._read_registers(
+                transport, _REG_ADC_BATTERY, _STANDARD_MEAS_COUNT
+            )
+            dds = None
+            adc_ec = None
+            adc_permittivity = None
+            words = [0, *values]
+
+        battery_count = words[1]
         return Measurement(
             dds=dds,
             adc_ec=adc_ec,
-            adc_permittivity=words[0],
-            adc_battery=words[1],
-            battery_v=battery_voltage(words[1], self.battery_divider),
+            adc_permittivity=adc_permittivity,
+            adc_battery=battery_count if include_advanced else None,
+            battery_v=battery_voltage(battery_count, self.battery_divider),
             temperature_c=round(signed_12bit(words[2]) * 0.0625, 4),
             ec_bulk=round(words[3] * 0.001, 3),
             vwc_rock=round(words[4] * 0.1, 1),
@@ -361,9 +380,15 @@ def start_broadcast_measurement(
 
 
 def read_broadcast_measurement(
-    sensors: Sequence[Slt5009], transport: Transport
+    sensors: Sequence[Slt5009],
+    transport: Transport,
+    *,
+    include_advanced: bool = False,
 ) -> list[Measurement]:
     """Start a measurement by broadcast and read every listed SLT5009."""
     checked = _validate_broadcast_sensors(sensors)
     start_broadcast_measurement(checked, transport)
-    return [sensor.read_data(transport) for sensor in checked]
+    return [
+        sensor.read_data(transport, include_advanced=include_advanced)
+        for sensor in checked
+    ]

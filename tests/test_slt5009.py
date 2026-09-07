@@ -54,16 +54,13 @@ def _exception_resp(slave: int, request_function: int, code: int) -> bytes:
     return append_crc_le(bytes([slave, request_function | 0x80, code]))
 
 
-def _measurement_responses(slave: int) -> list[bytes]:
+def _measurement_responses(slave: int, *, include_advanced: bool = False) -> list[bytes]:
+    standard = [200, 16, 1000, 10, 20, 30, 0, 2000, 3000]
+    measurement = [16, 32, 100, *standard] if include_advanced else standard
     return [
         _write_resp(slave, 0x000A, 1),
         _read_resp(slave, [0x0001]),
-        _read_resp(slave, [16]),
-        _read_resp(slave, [32]),
-        _read_resp(
-            slave,
-            [100, 200, 16, 1000, 10, 20, 30, 0, 2000, 3000],
-        ),
+        _read_resp(slave, measurement),
     ]
 
 
@@ -232,19 +229,34 @@ def test_modbus_inter_frame_delay_is_applied(monkeypatch):
 
 
 def test_read_measurement_with_fragmented_frames():
-    measurement = Slt5009(slave=1).read_measurement(
-        FakeTransport(_measurement_responses(1), max_chunk_size=2)
-    )
+    sensor = Slt5009(slave=1)
+    transport = FakeTransport(_measurement_responses(1), max_chunk_size=2)
 
-    assert measurement.dds == 16
-    assert measurement.adc_ec == 32
-    assert measurement.adc_permittivity == 100
-    assert measurement.adc_battery == 200
+    measurement = sensor.read_measurement(transport)
+
+    assert measurement.dds is None
+    assert measurement.adc_ec is None
+    assert measurement.adc_permittivity is None
+    assert measurement.adc_battery is None
+    assert transport.writes[-1] == sensor.build_read(0x0014, 9)
     assert measurement.temperature_c == pytest.approx(1.0)
     assert measurement.ec_bulk == pytest.approx(1.0)
     assert measurement.vwc == pytest.approx(2.0)
     assert measurement.ec_pore == pytest.approx(2.0)
     assert measurement.ec_pore_coco == pytest.approx(3.0)
+
+
+def test_read_measurement_includes_advanced_values_in_one_read():
+    sensor = Slt5009(slave=1)
+    transport = FakeTransport(_measurement_responses(1, include_advanced=True))
+
+    measurement = sensor.read_measurement(transport, include_advanced=True)
+
+    assert measurement.dds == 16
+    assert measurement.adc_ec == 32
+    assert measurement.adc_permittivity == 100
+    assert measurement.adc_battery == 200
+    assert transport.writes[-1] == sensor.build_read(0x000E, 12)
 
 
 def test_read_address():

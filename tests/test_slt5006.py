@@ -22,16 +22,19 @@ def _error_resp(fc: int, code: int) -> bytes:
     return append_crc_be(bytes([fc | 0x80, code]))
 
 
-def _measurement_responses() -> list[bytes]:
-    block = bytes.fromhex(
-        "64 00 c8 00 10 00 e8 03 0a 00 14 00 1e 00 "
-        "00 00 d0 07 b8 0b"
+def _measurement_responses(*, include_advanced: bool = False) -> list[bytes]:
+    standard = bytes.fromhex(
+        "c8 00 10 00 e8 03 0a 00 14 00 1e 00 00 00 d0 07 b8 0b"
+    )
+    measurement = (
+        bytes.fromhex("10 00 20 00 00 00 64 00") + standard
+        if include_advanced
+        else standard
     )
     return [
         _resp(0x02, 0x07, bytes([0x01])),
         _resp(0x01, 0x08, bytes([0x01])),
-        _resp(0x01, 0x09, bytes([0x10, 0x00, 0x20, 0x00])),
-        _resp(0x01, 0x0F, block),
+        _resp(0x01, 0x09 if include_advanced else 0x11, measurement),
     ]
 
 
@@ -170,10 +173,11 @@ def test_read_measurement_with_fragmented_frames():
 
     measurement = Slt5006().read_measurement(transport)
 
-    assert measurement.dds == 16
-    assert measurement.adc_ec == 32
-    assert measurement.adc_permittivity == 100
-    assert measurement.adc_battery == 200
+    assert measurement.dds is None
+    assert measurement.adc_ec is None
+    assert measurement.adc_permittivity is None
+    assert measurement.adc_battery is None
+    assert transport.writes[-1] == Slt5006().build_read(0x11, 18)
     assert measurement.temperature_c == pytest.approx(1.0)
     assert measurement.ec_bulk == pytest.approx(1.0)
     assert measurement.vwc_rock == pytest.approx(1.0)
@@ -181,6 +185,18 @@ def test_read_measurement_with_fragmented_frames():
     assert measurement.vwc_coco == pytest.approx(3.0)
     assert measurement.ec_pore == pytest.approx(2.0)
     assert measurement.ec_pore_coco == pytest.approx(3.0)
+
+
+def test_read_measurement_includes_advanced_values_in_one_read():
+    transport = FakeTransport(_measurement_responses(include_advanced=True))
+
+    measurement = Slt5006().read_measurement(transport, include_advanced=True)
+
+    assert measurement.dds == 16
+    assert measurement.adc_ec == 32
+    assert measurement.adc_permittivity == 100
+    assert measurement.adc_battery == 200
+    assert transport.writes[-1] == Slt5006().build_read(0x09, 26)
 
 
 def test_measurement_waits_before_first_state_poll(monkeypatch):
@@ -193,12 +209,11 @@ def test_measurement_waits_before_first_state_poll(monkeypatch):
 
 
 def test_measurement_values_are_rounded():
-    block = bytes.fromhex(
-        "00 00 00 00 00 00 00 00 38 00 00 00 00 00 "
-        "00 00 00 00 00 00"
+    standard = bytes.fromhex(
+        "00 00 00 00 00 00 38 00 00 00 00 00 00 00 00 00 00 00"
     )
     responses = _measurement_responses()
-    responses[-1] = _resp(0x01, 0x0F, block)
+    responses[-1] = _resp(0x01, 0x11, standard)
 
     measurement = Slt5006().read_measurement(FakeTransport(responses))
 
@@ -207,12 +222,11 @@ def test_measurement_values_are_rounded():
 
 
 def test_negative_temperature():
-    block = bytes.fromhex(
-        "00 00 00 00 f0 0f 00 00 00 00 00 00 00 00 "
-        "00 00 00 00 00 00"
+    standard = bytes.fromhex(
+        "00 00 f0 0f 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
     )
     responses = _measurement_responses()
-    responses[-1] = _resp(0x01, 0x0F, block)
+    responses[-1] = _resp(0x01, 0x11, standard)
 
     measurement = Slt5006().read_measurement(FakeTransport(responses))
 

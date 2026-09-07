@@ -217,8 +217,10 @@ class SoilSensor(ABC):
         """Read firmware version and serial number."""
 
     @abstractmethod
-    def read_measurement(self, transport: Transport) -> Measurement:
-        """Trigger a measurement (if needed) and return the values."""
+    def read_measurement(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
+        """Trigger a measurement and optionally include raw diagnostic values."""
 
     @abstractmethod
     def set_address(self, transport: Transport, new_address: int | str) -> None:

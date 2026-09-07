@@ -40,9 +40,10 @@ _REG_VERSION = 0x00  # MAJOR, MINOR, REVISION (3 bytes)
 _REG_SERIAL = 0x03  # LL, LU, UL, UU (4 bytes)
 _REG_SNSR_CTRL = 0x07
 _REG_SNSR_STATE = 0x08
-_REG_DDS = 0x09  # DDS (2 bytes) + ADC_EC (2 bytes)
-_REG_MEAS_BLOCK = 0x0F  # PERMITTIVITY .. EC_PORE_COCO
-_MEAS_LEN = 20  # bytes = 10 little-endian words
+_REG_DDS = 0x09
+_REG_ADC_BATTERY = 0x11
+_ADVANCED_MEAS_LEN = 26  # DDS .. EC_PORE_COCO
+_STANDARD_MEAS_LEN = 18  # ADC_BATTERY .. EC_PORE_COCO
 
 _SNSR_CTRL_START = 0x01
 _SNSR_STATE_DONE = 0x01
@@ -178,10 +179,12 @@ class MurataBinarySensor(SoilSensor):
             product=self.product, firmware_version=firmware, serial_number=serial_number
         )
 
-    def read_measurement(self, transport: Transport) -> Measurement:
+    def read_measurement(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
         self._start_measurement(transport)
         self._wait_measurement(transport)
-        return self._read_values(transport)
+        return self._read_values(transport, include_advanced=include_advanced)
 
     def _start_measurement(self, transport: Transport) -> None:
         self._write_register(transport, _REG_SNSR_CTRL, _SNSR_CTRL_START)
@@ -196,22 +199,34 @@ class MurataBinarySensor(SoilSensor):
             time.sleep(self._poll_interval)
         raise SensorTimeoutError("measurement did not complete in time")
 
-    def _read_values(self, transport: Transport) -> Measurement:
-        # DDS + ADC_EC (2 little-endian words).
-        head = self._read_registers(transport, _REG_DDS, 4)
-        dds = head[0] | (head[1] << 8)
-        adc_ec = head[2] | (head[3] << 8)
+    def _read_values(
+        self, transport: Transport, *, include_advanced: bool = False
+    ) -> Measurement:
+        if include_advanced:
+            data = self._read_registers(transport, _REG_DDS, _ADVANCED_MEAS_LEN)
+            values = [data[i] | (data[i + 1] << 8) for i in range(0, len(data), 2)]
+            # values: dds, adc_ec, reserved, perm, battery, temp, ...
+            dds = values[0]
+            adc_ec = values[1]
+            words = values[3:]
+            adc_permittivity = words[0]
+        else:
+            data = self._read_registers(
+                transport, _REG_ADC_BATTERY, _STANDARD_MEAS_LEN
+            )
+            values = [data[i] | (data[i + 1] << 8) for i in range(0, len(data), 2)]
+            dds = None
+            adc_ec = None
+            adc_permittivity = None
+            words = [0, *values]
 
-        block = self._read_registers(transport, _REG_MEAS_BLOCK, _MEAS_LEN)
-        words = [block[i] | (block[i + 1] << 8) for i in range(0, _MEAS_LEN, 2)]
-        # words: perm, battery, temp, ec_bulk, vwc_rock, vwc, vwc_coco,
-        #        ec_pore_s1 (unused), ec_pore, ec_pore_coco
+        battery_count = words[1]
         return Measurement(
             dds=dds,
             adc_ec=adc_ec,
-            adc_permittivity=words[0],
-            adc_battery=words[1],
-            battery_v=battery_voltage(words[1], self.battery_divider),
+            adc_permittivity=adc_permittivity,
+            adc_battery=battery_count if include_advanced else None,
+            battery_v=battery_voltage(battery_count, self.battery_divider),
             temperature_c=round(signed_12bit(words[2]) * 0.0625, 4),
             ec_bulk=round(words[3] * 0.001, 3),
             vwc_rock=round(words[4] * 0.1, 1),

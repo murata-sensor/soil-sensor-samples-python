@@ -193,8 +193,13 @@ class Slt5008(SoilSensor):
         )
 
     def read_measurement(
-        self, transport: Transport, *, use_crc: bool | None = None
+        self,
+        transport: Transport,
+        *,
+        use_crc: bool | None = None,
+        include_advanced: bool = False,
     ) -> Measurement:
+        del include_advanced
         crc = self.use_crc if use_crc is None else use_crc
         ttt = self._start_measurement(transport, "MC" if crc else "M")
         # ttt == 0 means the data are ready now and no service request is sent.

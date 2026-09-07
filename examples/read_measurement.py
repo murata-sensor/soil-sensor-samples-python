@@ -40,9 +40,14 @@ def main() -> int:
     with sensors[0].open(args.port) as transport:
         infos = [sensor.read_info(transport) for sensor in sensors]
         if simultaneous:
-            measurements = _cli.read_concurrent_measurement(sensors, transport)
+            measurements = _cli.read_concurrent_measurement(
+                sensors, transport, include_advanced=args.all
+            )
         else:
-            measurements = [sensor.read_measurement(transport) for sensor in sensors]
+            measurements = [
+                sensor.read_measurement(transport, include_advanced=args.all)
+                for sensor in sensors
+            ]
 
     for index, (sensor, info, measurement) in enumerate(zip(sensors, infos, measurements)):
         if multi:

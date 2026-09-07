@@ -105,7 +105,7 @@ pip install git+https://github.com/murata-sensor/soil-sensor-samples-python.git
 # List available serial ports (to find your sensor)
 python examples/list_ports.py
 
-# Read the latest measurement (add --all for advanced diagnostic DDS/ADC counts)
+# Read the latest measurement (add --all to read and show diagnostic DDS/ADC counts)
 python examples/read_measurement.py --product SLT5009 --port COM3 --address 1
 
 # Read sensor information
@@ -260,7 +260,7 @@ pip install git+https://github.com/murata-sensor/soil-sensor-samples-python.git
 # 利用可能なシリアルポートを一覧表示（センサのポートを探す）
 python examples/list_ports.py
 
-# 最新の測定値を読み出す（--all で高度な診断用 DDS/ADC カウント値も表示）
+# 最新の測定値を読み出す（--all で診断用 DDS/ADC カウント値も読出し・表示）
 python examples/read_measurement.py --product SLT5009 --port COM3 --address 1
 
 # センサ情報を読み出す
